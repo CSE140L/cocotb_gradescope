@@ -1,8 +1,11 @@
 import json
 import inspect
+import sys
 from pathlib import Path
 from enum import Enum
 from functools import wraps
+from typing import List
+
 from cocotb.result import TestFailure, TestError
 from cocotb.handle import HierarchyObject
 
@@ -31,7 +34,8 @@ class GradescopeReporter:
     def __del__(self):
         self._write_results_to_file(self.results_path)
 
-    def report_test(self, visibility: Visibility, max_score: int, visibility_on_success: Visibility = None, visibility_on_failure: Visibility = None):
+    def report_test(self, visibility: Visibility, max_score: int, visibility_on_success: Visibility = None,
+                    visibility_on_failure: Visibility = None):
         """Decorator to capture and store test results with support for partial scores."""
 
         def decorator(func):
@@ -75,6 +79,8 @@ class GradescopeReporter:
                     # Store the result in the global dictionary
                     self.test_results["tests"].append(test_result)
 
+                    # need to move this in the destructor or be able to call it predictably when all the tests
+                    # have finished running
                     self._write_results_to_file(self.results_path)
 
                 if test_result["status"] == TestStatus.PASSED.value:
@@ -90,3 +96,26 @@ class GradescopeReporter:
         """Write the collected test results to a JSON file."""
         with open(filename.absolute(), "w") as f:
             json.dump(self.test_results, f, indent=4)
+
+
+def merge_results(result_files: List[Path], output_file: Path = Path("results.json")) -> None:
+    output = {"tests": []}
+    for result_file in result_files:
+        if result_file.exists():
+            with open(result_file.absolute(), "r") as f:
+                data = json.load(f)
+                if "tests" in data:
+                    for test in data["tests"]:
+                        output["tests"].append(test)
+                else:
+                    print(f"'tests' key not found in {result_file}")
+
+    with open(output_file.absolute(), "w") as f:
+        json.dump(output, f, indent=4)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("usage: python -m cocotb_gradescope.reporter [file1.json ...] <output.json>")
+    else:
+        merge_results([Path(file) for file in sys.argv[1:-1]], Path(sys.argv[-1]))

@@ -37,3 +37,11 @@ async def test_part1(dut, set_score):
     assert 1 == 2
     set_score(10)
 ```
+
+If you have generated multiple `results.json` files (say for different testing modules), then please ensure to merge
+them all together with:
+```bash
+python -m cocotb_gradescope.reporter [test1.json ...] <output_file.json>
+```
+
+This will create one big `output_file.json` that is a naive concatenation of all the test results.
