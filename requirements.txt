@@ -1,0 +1,2 @@
+setuptools~=70.0.0
+cocotb~=1.9.1
