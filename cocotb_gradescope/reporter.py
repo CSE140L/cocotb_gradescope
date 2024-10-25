@@ -35,9 +35,7 @@ class GradescopeReporter:
         self._write_results_to_file(self.results_path)
 
     def report_test(self, visibility: Visibility, max_score: int, visibility_on_success: Visibility = None,
-                    visibility_on_failure: Visibility = None):
-        """Decorator to capture and store test results with support for partial scores."""
-
+                    visibility_on_failure: Visibility = None, notes: str = None):
         def decorator(func):
             @wraps(func)
             async def wrapper(dut: HierarchyObject, *args, **kwargs):
@@ -46,6 +44,7 @@ class GradescopeReporter:
                     "name": test_name,
                     "status": TestStatus.FAILED.value,
                     "output": "",
+                    "output_format": "md",
                     "score": 0,
                     "max_score": max_score,
                     "visibility": visibility.value,
@@ -76,7 +75,9 @@ class GradescopeReporter:
                 except Exception as e:
                     dut._log.warning(f"Gradescope Export Error: {e}")
                 finally:
-                    # Store the result in the global dictionary
+                    if notes is not None:
+                        test_result["output"] = f"**Notes:** {notes}\n{test_result['output']}"
+
                     self.test_results["tests"].append(test_result)
 
                     # need to move this in the destructor or be able to call it predictably when all the tests
